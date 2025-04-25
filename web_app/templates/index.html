@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS RDS Demo - User Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">AWS RDS Demo - User Management</h1>
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Database Connection Status</h5>
+                <div id="connection-status" class="alert alert-info">
+                    Checking database connection...
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Add New User</h5>
+                <form id="user-form" class="mb-3">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add User</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Users</h5>
+                <div id="users-container" class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Created At</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function checkConnection() {
+            try {
+                const response = await fetch('/api/test-connection');
+                const data = await response.json();
+                
+                const statusDiv = document.getElementById('connection-status');
+                if (data.status === 'success') {
+                    statusDiv.className = 'alert alert-success';
+                    statusDiv.textContent = 'Database connection successful!';
+                } else {
+                    statusDiv.className = 'alert alert-danger';
+                    statusDiv.textContent = 'Error: ' + data.message;
+                }
+            } catch (error) {
+                const statusDiv = document.getElementById('connection-status');
+                statusDiv.className = 'alert alert-danger';
+                statusDiv.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users');
+                const users = await response.json();
+                
+                const tbody = document.getElementById('users-table-body');
+                tbody.innerHTML = users.map(user => `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.username}</td>
+                        <td>${user.email}</td>
+                        <td>${new Date(user.created_at).toLocaleString()}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        async function handleSubmit(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, email }),
+                });
+
+                if (response.ok) {
+                    loadUsers();
+                    document.getElementById('user-form').reset();
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + error.message);
+                }
+            } catch (error) {
+                console.error('Error creating user:', error);
+                alert('Error creating user');
+            }
+        }
+
+        // Initialize the form submission handler
+        document.getElementById('user-form').addEventListener('submit', handleSubmit);
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            checkConnection();
+            loadUsers();
+        });
+    </script>
+</body>
+</html>
